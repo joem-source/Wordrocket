@@ -44,7 +44,7 @@ h1 .rk{display:inline-block;transform:rotate(-12deg)}
 .hello{font-family:var(--display);font-weight:500;color:var(--ink-soft);font-size:18px;margin:2px 0 0}
 .stars{font-family:var(--display);font-weight:700;font-size:22px;background:var(--paper);border:3px solid var(--sun);border-radius:999px;padding:6px 16px;display:flex;gap:8px;align-items:center;font-variant-numeric:tabular-nums}
 
-.tabs{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+.tabs{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
 .tab{background:var(--paper);border:3px solid var(--line);border-radius:18px;padding:10px 8px;text-align:center;display:flex;flex-direction:column;gap:2px;transition:transform .15s}
 .tab:hover{transform:translateY(-2px)}
 .tab b{font-family:var(--display);font-size:20px;font-weight:700}
@@ -55,7 +55,6 @@ h1 .rk{display:inline-block;transform:rotate(-12deg)}
 .meter i{display:block;height:100%;background:var(--grass);border-radius:9px;transition:width .4s}
 .tab[aria-selected="true"] .meter{background:rgba(255,255,255,.35)}
 .tab[aria-selected="true"] .meter i{background:#fff}
-@media (max-width:560px){.tabs{grid-template-columns:repeat(2,minmax(0,1fr))}}
 
 .pad{background:var(--paper);border-radius:28px;border:4px solid var(--ink);box-shadow:0 8px 0 var(--ink);padding:20px;display:flex;flex-direction:column;gap:18px;align-items:center;position:relative}
 .modes{display:flex;gap:6px;background:var(--sky);border-radius:999px;padding:5px;flex-wrap:wrap;justify-content:center}
@@ -244,6 +243,7 @@ canvas#fx{position:fixed;inset:0;pointer-events:none;z-index:60;width:100%;heigh
       <label for="kidName">Reader's name
         <input id="kidName" type="text" maxlength="24" placeholder="e.g. Bradley" autocomplete="off">
       </label>
+      <div class="row"><button class="btn solid" id="addLevel" type="button">+ Add a new level</button></div>
       <p class="note" id="editingNote"></p>
       <label for="lvName">Level name
         <input id="lvName" type="text" maxlength="20" autocomplete="off">
@@ -268,6 +268,7 @@ canvas#fx{position:fixed;inset:0;pointer-events:none;z-index:60;width:100%;heigh
       <div class="row" id="resetRow">
         <button class="btn danger" id="resetLevel" type="button">Start this level over</button>
       </div>
+      <div class="row" id="deleteRow"></div>
       <p class="note">Progress saves by itself in this browser on this device. To move it to another device, copy the progress code here and load it there.</p>
       <label for="progCode">Progress code
         <textarea id="progCode" spellcheck="false" placeholder="Tap Copy progress code, or paste a code from another device here"></textarea>
@@ -294,12 +295,14 @@ canvas#fx{position:fixed;inset:0;pointer-events:none;z-index:60;width:100%;heigh
 <script>
 (function(){
 const LEVELS=[
-  {id:"spell",name:"Spelling",sub:"Week 6 · magic e",c:"#F08A24",words:"bone drive lime plane rope cube globe mute poke shake"},
   {id:"t2b",name:"2B Words",sub:"Trick words",c:"#6A55F0",words:"also dollar heard once together beautiful earth hurry picture body tomorrow enough learn quiet trouble eye listen bought quite watch build friendly money sentence weather carry noise spring whose gone"},
   {id:"t1r",name:"1R Words",sub:"Trick words",c:"#2FA0D8",words:"answer|Ave.|been|believe|bicycle|board|bottom|climb|country|done|Dr.|early|field|front|giant|idea|library|machine|million|minute|mountain|move|Mr.|Mrs.|Ms.|piece|quarter|question|second|shall|sign|sorry|special|St.|stomach|tough|warm|weigh|whistle"},
   {id:"t2r",name:"2R Bonus",sub:"Practice if you want",c:"#2FB36E",words:"accident among beauty blood blossom borrow bowl breath breathe calendar calm canoe captain carrot cellar certain certainly chief chocolate closet cloth comb comfortable common continue courage cousin curtain danger daughter diamond drawer either English except famous forward future garage island lose meant mirror mischief muscle necklace neither ocean pleasant rescue scene swallow tomato tongue toward vegetable wisdom worry worse"}
 ];
 const DEFAULTS={};LEVELS.forEach(l=>DEFAULTS[l.id]=l.words.split(/[|\s]+/).filter(Boolean));
+const COLORS=["#F08A24","#E0559A","#0EA5A0","#8B5CF6","#D97706","#2563EB"];
+function levels(){const rm=S.removed||[];return LEVELS.filter(l=>!rm.includes(l.id)).concat(S.custom||[]);}
+const lvObj=lv=>levels().find(l=>l.id===lv)||LEVELS.find(l=>l.id===lv)||{name:"Level",sub:""};
 const SAY={"Ave.":"Avenue","Dr.":"Doctor","Mr.":"Mister","Mrs.":"Missus","Ms.":"Miz","St.":"Street"};
 const NEED=3, ACTIVE=5;
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
@@ -314,18 +317,20 @@ function fit(el){
   while(el.scrollWidth>el.clientWidth&&size>14){size-=2;el.style.fontSize=size+"px";}
 }
 const fitAll=()=>{fit(document.getElementById("big"));if(!document.getElementById("party").hidden)fit(document.getElementById("partyWord"));};
-const lvName=lv=>T(lv).name||LEVELS.find(l=>l.id===lv).name;
-const lvSub=lv=>T(lv).sub||LEVELS.find(l=>l.id===lv).sub;
+const lvName=lv=>T(lv).name||lvObj(lv).name;
+const lvSub=lv=>T(lv).sub||lvObj(lv).sub;
 const BUDDIES=["🦖","🐙","🦄","🐶","🐸","🦊","🐼","🐯","🦒","🐳","🦕","🐵","🚀","🤖","🐲","🦁"];
 const CHEERS=["Awesome!","You got it!","Super reading!","Yes!","Great job!","Wow!","Nice one!"];
 const KEY="wordRockets.v1";
 
-let S={name:"",mode:"find",level:"spell",lists:{},prog:{}};
+let S={name:"",level:"t2b",lists:{},prog:{},custom:[],removed:[]};
 try{const raw=localStorage.getItem(KEY);if(raw){S=Object.assign(S,JSON.parse(raw));}}catch(e){}
+if(!levels().length)S.removed=[];
+if(!levels().some(l=>l.id===S.level))S.level=levels()[0].id;
 function save(){try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){}}
 
 const $=id=>document.getElementById(id);
-const words=lv=>S.lists[lv]||DEFAULTS[lv];
+const words=lv=>S.lists[lv]||DEFAULTS[lv]||[];
 const prog=lv=>(S.prog[lv]=S.prog[lv]||{});
 const count=(lv,w)=>prog(lv)[w]||0;
 const known=lv=>words(lv).filter(w=>count(lv,w)>=NEED);
@@ -374,17 +379,11 @@ function nextWord(lv){
   d.n++;const w=d.q.shift();save();return w;
 }
 function reshuffle(){const d=D(S.level);d.q=[];d.n=0;current=null;resting=false;renderPad();}
-function distractors(lv,target){
-  const all=[...new Set(words(lv).concat(DEFAULTS[lv]))].filter(w=>w.toLowerCase()!==target.toLowerCase());
-  const t=target.toLowerCase();
-  const scored=shuffle(all).map(w=>{const l=w.toLowerCase();let s=Math.random();if(l[0]===t[0])s+=2;if(Math.abs(l.length-t.length)<=1)s+=1;if(l.slice(-2)===t.slice(-2))s+=1;return [s,w];}).sort((a,b)=>b[0]-a[0]);
-  return scored.slice(0,2).map(x=>x[1]);
-}
 
 /* ---------- rendering ---------- */
 function renderTabs(){
   const nav=$("tabs");nav.innerHTML="";
-  LEVELS.forEach(l=>{
+  levels().forEach(l=>{
     const b=document.createElement("button");b.className="tab";b.type="button";b.setAttribute("role","tab");b.id="tab-"+l.id;
     b.setAttribute("aria-selected",S.level===l.id);b.style.setProperty("--c",l.c);
     const k=known(l.id).length,n=words(l.id).length;
@@ -392,7 +391,7 @@ function renderTabs(){
     b.onclick=()=>{if(S.level===l.id)return;S.level=l.id;save();current=null;last=null;resting=false;renderAll();};
     nav.appendChild(b);
   });
-  let total=0;LEVELS.forEach(l=>total+=known(l.id).length);$("totalKnown").textContent=total;
+  let total=0;levels().forEach(l=>total+=known(l.id).length);$("totalKnown").textContent=total;
   $("hello").textContent=S.name?`Hi ${S.name}! Get 3 stars on a word to launch it!`:"Get 3 stars on a word to launch it!";
 }
 
@@ -400,6 +399,10 @@ function pips(w){const n=Math.min(count(S.level,w),NEED);let h='<span>Stars:</sp
 
 function renderPad(msg="",cls=""){
   const pad=$("pad"),lv=S.level;
+  if(!words(lv).length){
+    pad.innerHTML=`<div class="done"><div class="trophy">📝</div><h2>No words here yet</h2><p class="howto">A grown-up can add words to this level in the Grown-ups section below.</p></div>`;
+    return;
+  }
   if(!current||count(lv,current)>=NEED)current=nextWord(lv);
   if(!current){
     pad.innerHTML=`<div class="done"><div class="trophy">🏆</div><h2>You learned every word in ${esc(lvName(lv))}!</h2><p class="howto">Your rocket made it to space! Pick another level up top to fuel up the next one.</p></div>`;
@@ -451,6 +454,24 @@ function renderGrown(){
   $("saveNote").textContent="";
   $("resetRow").innerHTML=`<button class="btn danger" id="resetLevel" type="button">Start this level over</button>`;
   $("resetLevel").onclick=askReset;
+  $("restoreWords").hidden=!DEFAULTS[S.level];
+  renderDelete();
+}
+function renderDelete(){
+  const r=$("deleteRow"),many=levels().length>1,removed=(S.removed||[]).length>0;
+  r.innerHTML=(many?`<button class="btn danger" id="delLevel" type="button">Delete this level</button>`:"")+(removed?`<button class="btn" id="unhide" type="button">Bring back the original levels</button>`:"");
+  if(many)$("delLevel").onclick=askDelete;
+  if(removed)$("unhide").onclick=()=>{S.removed=[];save();renderAll();};
+}
+function askDelete(){
+  $("deleteRow").innerHTML=`<span class="note">Delete the <b>${esc(lvName(S.level))}</b> level and its stars?</span><button class="btn danger" id="yesDel" type="button">Yes, delete it</button><button class="btn" id="noDel" type="button">Cancel</button>`;
+  $("noDel").onclick=renderDelete;
+  $("yesDel").onclick=()=>{
+    const lv=S.level;
+    if(DEFAULTS[lv]){S.removed=(S.removed||[]).concat(lv);}
+    else{S.custom=(S.custom||[]).filter(l=>l.id!==lv);delete S.lists[lv];delete S.prog[lv];if(S.decks)delete S.decks[lv];if(S.titles)delete S.titles[lv];}
+    S.level=levels()[0].id;current=null;last=null;resting=false;save();renderAll();
+  };
 }
 function askReset(){
   $("resetRow").innerHTML=`<span class="note">Clear all stars and known words in this level?</span><button class="btn danger" id="yesReset" type="button">Yes, start over</button><button class="btn" id="noReset" type="button">Cancel</button>`;
@@ -486,16 +507,6 @@ function launch(){
 function renderAll(){renderTabs();renderTank();renderPad();renderShelf();renderGrown();}
 
 /* ---------- play ---------- */
-function pickChoice(btn){
-  if(locked)return;audio();
-  if(btn.dataset.w===current){
-    btn.classList.add("right");
-    $("pad").querySelectorAll(".choice").forEach(b=>b.disabled=true);
-    correct();
-  }else{
-    btn.classList.add("wrong");btn.disabled=true;miss();
-  }
-}
 function correct(){
   locked=true;const lv=S.level,w=current;
   prog(lv)[w]=count(lv,w)+1;save();
@@ -564,13 +575,21 @@ $("saveWords").onclick=()=>{
   if(!list.length){$("saveNote").textContent="Add at least one word first.";return;}
   S.titles=S.titles||{};S.titles[S.level]={name:$("lvName").value.trim(),sub:$("lvSub").value.trim()};
   if(JSON.stringify(list)!==JSON.stringify(words(S.level))){S.lists[S.level]=list;D(S.level).q=[];D(S.level).n=0;current=null;}
-  save();renderTabs();renderPad();renderShelf();
+  save();renderTabs();renderTank();renderPad();renderShelf();
   $("editingNote").innerHTML=`Editing the <b>${esc(lvName(S.level))}</b> level. Tap a different level up top to edit that one.`;
   $("saveNote").textContent=`Saved! ${list.length} words in this level.`;
 };
+$("addLevel").onclick=()=>{
+  S.custom=S.custom||[];
+  const id="c"+Date.now().toString(36);
+  S.custom.push({id,name:"New Level",sub:"My words",c:COLORS[S.custom.length%COLORS.length]});
+  S.lists[id]=[];S.level=id;current=null;last=null;resting=false;save();renderAll();
+  $("saveNote").textContent="New level added! Give it a name and some words, then tap Save this level.";
+  $("lvName").focus();$("lvName").select();
+};
 $("restoreWords").onclick=()=>{delete S.lists[S.level];save();current=null;renderAll();$("saveNote").textContent="Back to the original list.";};
 $("copyCode").onclick=()=>{
-  const code="WR1:"+btoa(unescape(encodeURIComponent(JSON.stringify({name:S.name,lists:S.lists,prog:S.prog,titles:S.titles||{}}))));
+  const code="WR1:"+btoa(unescape(encodeURIComponent(JSON.stringify({name:S.name,lists:S.lists,prog:S.prog,titles:S.titles||{},custom:S.custom||[],removed:S.removed||[]}))));
   const ta=$("progCode");ta.value=code;ta.focus();ta.select();
   const ok=()=>$("codeNote").textContent="Copied! Paste it into Word Rockets on the other device.";
   try{navigator.clipboard.writeText(code).then(ok,()=>$("codeNote").textContent="Code selected. Copy it with Ctrl+C or Cmd+C.");}catch(e){$("codeNote").textContent="Code selected. Copy it with Ctrl+C or Cmd+C.";}
@@ -581,7 +600,10 @@ $("loadCode").onclick=()=>{
     if(!raw.startsWith("WR1:"))throw 0;
     const d=JSON.parse(decodeURIComponent(escape(atob(raw.slice(4)))));
     if(typeof d!=="object"||!d.prog)throw 0;
-    S.name=d.name||"";S.lists=d.lists||{};S.titles=d.titles||{};S.prog=d.prog;S.decks={};save();
+    S.name=d.name||"";S.lists=d.lists||{};S.titles=d.titles||{};S.custom=d.custom||[];S.removed=d.removed||[];S.prog=d.prog;S.decks={};
+    if(!levels().length)S.removed=[];
+    if(!levels().some(l=>l.id===S.level))S.level=levels()[0].id;
+    save();
     current=null;resting=false;renderAll();
     $("codeNote").textContent="Progress loaded!";
   }catch(e){$("codeNote").textContent="That code didn't work. Copy the whole code and try again.";}
