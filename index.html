@@ -1,0 +1,411 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="Word Rockets: a reading game for young readers. Get 3 stars on a word to launch it!">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22%3E%3Ctext y=%22.9em%22 font-size=%2290%22%3E%F0%9F%9A%80%3C/text%3E%3C/svg%3E">
+<title>Word Rockets</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Andika:wght@400;700&family=Fredoka:wght@500;600;700&display=swap">
+<style>
+/* Layout: one big "launch pad" card in the middle, level tabs above it, the Known Words shelf below, grown-up tools tucked at the bottom. Single bright daytime look on purpose. */
+:root{
+  --sky:#E6F2FF;
+  --sky-deep:#CFE4FB;
+  --ink:#1D2846;
+  --ink-soft:#56607E;
+  --paper:#FFFFFF;
+  --sun:#FFC53D;
+  --grass:#2FB36E;
+  --berry:#F0476B;
+  --grape:#6A55F0;
+  --line:#BCD3EE;
+  --display:"Fredoka","Baloo 2","Trebuchet MS",system-ui,sans-serif;
+  --read:"Andika","Comic Sans MS","Segoe UI",system-ui,sans-serif;
+  color-scheme:light;
+}
+*{box-sizing:border-box}
+body{margin:0}
+[hidden]{display:none!important}
+html,body{background:var(--sky);color:var(--ink)}
+body{font-family:var(--read);font-size:18px;line-height:1.45;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:16px 40px;
+  background-image:radial-gradient(circle at 12% 8%,#fff 0 2px,transparent 3px),radial-gradient(circle at 78% 14%,#fff 0 2px,transparent 3px),radial-gradient(circle at 45% 4%,#fff 0 1.5px,transparent 2.5px);
+}
+.wrap{max-width:860px;margin:0 auto;display:flex;flex-direction:column;gap:18px}
+button{font:inherit;color:inherit;cursor:pointer}
+button:focus-visible,textarea:focus-visible,input:focus-visible{outline:4px solid var(--grape);outline-offset:3px}
+
+header{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+h1{font-family:var(--display);font-weight:700;font-size:clamp(30px,6vw,46px);margin:0;letter-spacing:.5px;line-height:1.05}
+h1 .rk{display:inline-block;transform:rotate(-12deg)}
+.hello{font-family:var(--display);font-weight:500;color:var(--ink-soft);font-size:18px;margin:2px 0 0}
+.stars{font-family:var(--display);font-weight:700;font-size:22px;background:var(--paper);border:3px solid var(--sun);border-radius:999px;padding:6px 16px;display:flex;gap:8px;align-items:center;font-variant-numeric:tabular-nums}
+
+.tabs{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+.tab{background:var(--paper);border:3px solid var(--line);border-radius:18px;padding:10px 8px;text-align:center;display:flex;flex-direction:column;gap:2px;transition:transform .15s}
+.tab:hover{transform:translateY(-2px)}
+.tab b{font-family:var(--display);font-size:20px;font-weight:700}
+.tab small{color:var(--ink-soft);font-size:14px}
+.tab[aria-selected="true"]{border-color:var(--c);background:var(--c);color:#fff}
+.tab[aria-selected="true"] small{color:#fff}
+.meter{height:8px;border-radius:9px;background:rgba(0,0,0,.08);overflow:hidden;margin-top:4px}
+.meter i{display:block;height:100%;background:var(--grass);border-radius:9px;transition:width .4s}
+.tab[aria-selected="true"] .meter{background:rgba(255,255,255,.35)}
+.tab[aria-selected="true"] .meter i{background:#fff}
+@media (max-width:560px){.tabs{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
+.pad{background:var(--paper);border-radius:28px;border:4px solid var(--ink);box-shadow:0 8px 0 var(--ink);padding:20px;display:flex;flex-direction:column;gap:18px;align-items:center;position:relative}
+.modes{display:flex;gap:6px;background:var(--sky);border-radius:999px;padding:5px;flex-wrap:wrap;justify-content:center}
+.mode{border:0;background:transparent;border-radius:999px;padding:8px 16px;font-family:var(--display);font-weight:600;font-size:17px;color:var(--ink-soft)}
+.mode[aria-pressed="true"]{background:var(--ink);color:#fff}
+.howto{margin:0;color:var(--ink-soft);text-align:center;font-size:17px;max-width:46ch}
+
+.speak{border:0;background:var(--grape);color:#fff;border-radius:999px;padding:14px 28px;font-family:var(--display);font-weight:700;font-size:24px;display:flex;align-items:center;gap:10px;box-shadow:0 5px 0 #4532c4}
+.speak:active{transform:translateY(4px);box-shadow:0 1px 0 #4532c4}
+
+.choices{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;width:100%}
+.choice{background:var(--paper);border:4px solid var(--line);border-radius:22px;padding:22px 6px;font-family:var(--read);font-weight:700;font-size:clamp(26px,6vw,44px);line-height:1.1;overflow-wrap:anywhere;transition:transform .12s,border-color .12s}
+.choice:hover{border-color:var(--grape);transform:translateY(-3px)}
+.choice.right{background:var(--grass);border-color:var(--grass);color:#fff;animation:pop .45s}
+.choice.wrong{background:#FFE3E9;border-color:var(--berry);animation:wob .45s}
+.choice:disabled{cursor:default}
+@media (max-width:520px){.choices{grid-template-columns:1fr}.choice{padding:16px 6px}}
+
+.bigword{font-family:var(--read);font-weight:700;font-size:clamp(56px,15vw,120px);line-height:1;padding:18px 10px;text-align:center;overflow-wrap:anywhere}
+.bigword.right{color:var(--grass);animation:pop .45s}
+.bigword.wrong{animation:wob .45s}
+.judge{display:flex;gap:14px;flex-wrap:wrap;justify-content:center}
+.yes,.no{border:0;border-radius:20px;padding:14px 22px;font-family:var(--display);font-weight:700;font-size:21px;color:#fff}
+.yes{background:var(--grass);box-shadow:0 5px 0 #1f8650}
+.no{background:var(--berry);box-shadow:0 5px 0 #b82b4b}
+.yes:active,.no:active{transform:translateY(4px);box-shadow:none}
+.gate{font-size:14px;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.08em;font-family:var(--display);font-weight:600}
+
+.pips{display:flex;gap:8px;align-items:center;font-family:var(--display);color:var(--ink-soft);font-size:16px}
+.pip{width:34px;height:34px;display:grid;place-items:center;font-size:28px;line-height:1;filter:grayscale(1);opacity:.35;transition:all .3s}
+.pip.on{filter:none;opacity:1;animation:pop .5s}
+.msg{min-height:1.6em;font-family:var(--display);font-weight:600;font-size:22px;text-align:center;margin:0}
+.msg.good{color:var(--grass)}.msg.oops{color:var(--berry)}
+
+.done{display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center;padding:20px 0}
+.done .trophy{font-size:90px;animation:float 2.4s ease-in-out infinite}
+.done h2{font-family:var(--display);font-size:32px;margin:0}
+
+.shelf{background:var(--paper);border-radius:24px;border:3px dashed var(--grass);padding:16px 18px;display:flex;flex-direction:column;gap:12px}
+.shelf h2{font-family:var(--display);font-size:24px;margin:0;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.shelf h2 span{font-size:16px;color:var(--ink-soft);font-weight:500}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{background:#E3F7EC;border:2px solid var(--grass);border-radius:999px;padding:5px 14px;font-weight:700;font-size:19px;display:flex;gap:6px;align-items:center}
+.chip.new{animation:pop .6s}
+.chip .back{border:0;background:transparent;color:var(--ink-soft);font-size:15px;padding:0 0 0 4px}
+.empty{color:var(--ink-soft);margin:0}
+
+details.grown{background:var(--sky-deep);border-radius:20px;padding:12px 18px}
+details.grown summary{font-family:var(--display);font-weight:600;font-size:18px;cursor:pointer}
+.gbody{display:flex;flex-direction:column;gap:14px;padding-top:12px}
+.gbody label{font-family:var(--display);font-weight:600;font-size:16px;display:flex;flex-direction:column;gap:6px}
+.gbody input,.gbody textarea{font:inherit;font-size:17px;border:2px solid var(--line);border-radius:12px;padding:8px 12px;background:var(--paper);color:var(--ink);width:100%}
+.gbody textarea{min-height:110px;resize:vertical}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.btn{border:2px solid var(--ink);background:var(--paper);border-radius:12px;padding:7px 14px;font-family:var(--display);font-weight:600;font-size:16px}
+.btn.danger{border-color:var(--berry);color:var(--berry)}
+.btn.solid{background:var(--ink);color:#fff}
+.note{font-size:15px;color:var(--ink-soft);margin:0}
+.toggle-show{display:flex;gap:8px;align-items:center;font-size:16px}
+.toggle-show.hide-known .chip .back{display:none}
+
+/* celebration */
+.party{position:fixed;inset:0;z-index:50;display:grid;place-items:center;background:rgba(29,40,70,.55);padding:20px}
+.party .card{background:var(--paper);border:5px solid var(--ink);border-radius:32px;box-shadow:0 10px 0 var(--ink);padding:26px 24px;text-align:center;max-width:440px;width:100%;animation:zoom .5s cubic-bezier(.3,1.6,.5,1)}
+.party .buddy{font-size:110px;line-height:1;display:inline-block;animation:dance .7s ease-in-out infinite alternate}
+.party h2{font-family:var(--display);font-size:30px;margin:8px 0 0}
+.party .w{font-family:var(--read);font-weight:700;font-size:52px;color:var(--grape);margin:4px 0 14px;overflow-wrap:anywhere}
+.party .btn{font-size:20px;padding:10px 24px;background:var(--sun);border-color:var(--ink)}
+canvas#fx{position:fixed;inset:0;pointer-events:none;z-index:60;width:100%;height:100%}
+
+@keyframes pop{0%{transform:scale(1)}40%{transform:scale(1.18)}100%{transform:scale(1)}}
+@keyframes wob{0%,100%{transform:translateX(0)}25%{transform:translateX(-10px)}75%{transform:translateX(10px)}}
+@keyframes zoom{from{transform:scale(.3);opacity:0}to{transform:scale(1);opacity:1}}
+@keyframes dance{from{transform:rotate(-14deg) translateY(0)}to{transform:rotate(14deg) translateY(-14px)}}
+@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-12px)}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header>
+    <div>
+      <h1><span class="rk" aria-hidden="true">🚀</span> Word Rockets</h1>
+      <p class="hello" id="hello">Get 3 stars on a word to launch it!</p>
+    </div>
+    <div class="stars" aria-label="Words learned"><span aria-hidden="true">⭐</span><span id="totalKnown">0</span> words learned</div>
+  </header>
+
+  <nav class="tabs" id="tabs" role="tablist" aria-label="Levels"></nav>
+
+  <section class="pad" id="pad" aria-live="polite"></section>
+
+  <section class="shelf">
+    <h2>🌟 Known Words <span id="shelfCount"></span></h2>
+    <div class="chips" id="chips"></div>
+  </section>
+
+  <details class="grown" id="grown">
+    <summary>Grown-ups</summary>
+    <div class="gbody">
+      <label for="kidName">Reader's name
+        <input id="kidName" type="text" maxlength="24" placeholder="e.g. Bradley" autocomplete="off">
+      </label>
+      <label for="wordEdit">Words in this level (one per line or separated by commas)
+        <textarea id="wordEdit" spellcheck="false"></textarea>
+      </label>
+      <div class="row">
+        <button class="btn solid" id="saveWords" type="button">Save word list</button>
+        <button class="btn" id="restoreWords" type="button">Use the original list</button>
+        <span class="note" id="saveNote" role="status"></span>
+      </div>
+      <p class="note">Tap the ↩ next to a known word to send it back for more practice.</p>
+      <div class="row" id="resetRow">
+        <button class="btn danger" id="resetLevel" type="button">Start this level over</button>
+      </div>
+      <p class="note">Progress is saved in this browser on this device.</p>
+    </div>
+  </details>
+</div>
+
+<div class="party" id="party" hidden>
+  <div class="card" role="dialog" aria-modal="true" aria-labelledby="partyTitle">
+    <div class="buddy" id="buddy">🦖</div>
+    <h2 id="partyTitle">You know this word!</h2>
+    <div class="w" id="partyWord"></div>
+    <button class="btn" id="partyOk" type="button">Keep going! ➜</button>
+  </div>
+</div>
+<canvas id="fx" aria-hidden="true"></canvas>
+
+<script>
+(function(){
+const LEVELS=[
+  {id:"spell",name:"Spelling",sub:"Week 6 · magic e",c:"#F08A24",words:"bone drive lime plane rope cube globe mute poke shake"},
+  {id:"t2b",name:"2B Words",sub:"Trick words",c:"#6A55F0",words:"also dollar heard once together beautiful earth hurry picture body tomorrow enough learn quiet trouble eye listen bought quite watch build friendly money sentence weather carry noise spring whose gone"},
+  {id:"t1r",name:"1R Words",sub:"Trick words",c:"#2FA0D8",words:"answer|Ave.|been|believe|bicycle|board|bottom|climb|country|done|Dr.|early|field|front|giant|idea|library|machine|million|minute|mountain|move|Mr.|Mrs.|Ms.|piece|quarter|question|second|shall|sign|sorry|special|St.|stomach|tough|warm|weigh|whistle"},
+  {id:"t2r",name:"2R Bonus",sub:"Practice if you want",c:"#2FB36E",words:"accident among beauty blood blossom borrow bowl breath breathe calendar calm canoe captain carrot cellar certain certainly chief chocolate closet cloth comb comfortable common continue courage cousin curtain danger daughter diamond drawer either English except famous forward future garage island lose meant mirror mischief muscle necklace neither ocean pleasant rescue scene swallow tomato tongue toward vegetable wisdom worry worse"}
+];
+const DEFAULTS={};LEVELS.forEach(l=>DEFAULTS[l.id]=l.words.split(/[|\s]+/).filter(Boolean));
+const SAY={"Ave.":"Avenue","Dr.":"Doctor","Mr.":"Mister","Mrs.":"Missus","Ms.":"Miz","St.":"Street"};
+const NEED=3, ACTIVE=5;
+const BUDDIES=["🦖","🐙","🦄","🐶","🐸","🦊","🐼","🐯","🦒","🐳","🦕","🐵","🚀","🤖","🐲","🦁"];
+const CHEERS=["Awesome!","You got it!","Super reading!","Yes!","Great job!","Wow!","Nice one!"];
+const KEY="wordRockets.v1";
+
+let S={name:"",mode:"find",level:"spell",lists:{},prog:{}};
+try{const raw=localStorage.getItem(KEY);if(raw){S=Object.assign(S,JSON.parse(raw));}}catch(e){}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){}}
+
+const $=id=>document.getElementById(id);
+const words=lv=>S.lists[lv]||DEFAULTS[lv];
+const prog=lv=>(S.prog[lv]=S.prog[lv]||{});
+const count=(lv,w)=>prog(lv)[w]||0;
+const known=lv=>words(lv).filter(w=>count(lv,w)>=NEED);
+const unknown=lv=>words(lv).filter(w=>count(lv,w)<NEED);
+const shuffle=a=>{a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.random()*(i+1)|0;[a[i],a[j]]=[a[j],a[i]];}return a;};
+
+let current=null,last=null,locked=false,justKnown=null;
+
+/* ---------- sound ---------- */
+let ac=null;
+function audio(){try{ac=ac||new (window.AudioContext||window.webkitAudioContext)();if(ac.state==="suspended")ac.resume();}catch(e){ac=null}return ac;}
+function tone(f,t0,d,type="triangle",v=.18){const a=audio();if(!a)return;const o=a.createOscillator(),g=a.createGain();o.type=type;o.frequency.value=f;g.gain.setValueAtTime(0,a.currentTime+t0);g.gain.linearRampToValueAtTime(v,a.currentTime+t0+.02);g.gain.exponentialRampToValueAtTime(.001,a.currentTime+t0+d);o.connect(g).connect(a.destination);o.start(a.currentTime+t0);o.stop(a.currentTime+t0+d+.05);}
+const ding=()=>{tone(880,0,.18);tone(1320,.09,.3);};
+const boop=()=>{tone(300,0,.18,"sine",.15);tone(230,.12,.25,"sine",.15);};
+const fanfare=()=>{[523,659,784,1047].forEach((f,i)=>tone(f,i*.12,.3,"square",.08));tone(1047,.5,.7,"triangle",.18);tone(1319,.5,.7,"triangle",.12);};
+
+/* ---------- speech ---------- */
+let voice=null;
+function pickVoice(){if(!("speechSynthesis" in window))return;const vs=speechSynthesis.getVoices().filter(v=>/^en/i.test(v.lang));voice=vs.find(v=>/samantha|google us|aria|jenny|zira/i.test(v.name))||vs.find(v=>/en-US/i.test(v.lang))||vs[0]||null;}
+if("speechSynthesis" in window){pickVoice();speechSynthesis.onvoiceschanged=pickVoice;}
+function say(t,rate=.8){if(!("speechSynthesis" in window))return;try{speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(SAY[t]||t);u.rate=rate;u.pitch=1.1;if(voice)u.voice=voice;speechSynthesis.speak(u);}catch(e){}}
+const canSpeak="speechSynthesis" in window;
+
+/* ---------- picking ---------- */
+function nextWord(lv){
+  const pool=unknown(lv).slice(0,ACTIVE);
+  if(!pool.length)return null;
+  const opts=pool.length>1?pool.filter(w=>w!==last):pool;
+  return opts[Math.random()*opts.length|0];
+}
+function distractors(lv,target){
+  const all=[...new Set(words(lv).concat(DEFAULTS[lv]))].filter(w=>w.toLowerCase()!==target.toLowerCase());
+  const t=target.toLowerCase();
+  const scored=shuffle(all).map(w=>{const l=w.toLowerCase();let s=Math.random();if(l[0]===t[0])s+=2;if(Math.abs(l.length-t.length)<=1)s+=1;if(l.slice(-2)===t.slice(-2))s+=1;return [s,w];}).sort((a,b)=>b[0]-a[0]);
+  return scored.slice(0,2).map(x=>x[1]);
+}
+
+/* ---------- rendering ---------- */
+function renderTabs(){
+  const nav=$("tabs");nav.innerHTML="";
+  LEVELS.forEach(l=>{
+    const b=document.createElement("button");b.className="tab";b.type="button";b.setAttribute("role","tab");b.id="tab-"+l.id;
+    b.setAttribute("aria-selected",S.level===l.id);b.style.setProperty("--c",l.c);
+    const k=known(l.id).length,n=words(l.id).length;
+    b.innerHTML=`<b>${l.name}</b><small>${l.sub}</small><small>${k} of ${n} known</small><span class="meter"><i style="width:${n?k/n*100:0}%"></i></span>`;
+    b.onclick=()=>{if(S.level===l.id)return;S.level=l.id;save();current=null;last=null;renderAll();};
+    nav.appendChild(b);
+  });
+  let total=0;LEVELS.forEach(l=>total+=known(l.id).length);$("totalKnown").textContent=total;
+  $("hello").textContent=S.name?`Hi ${S.name}! Get 3 stars on a word to launch it!`:"Get 3 stars on a word to launch it!";
+}
+
+function pips(w){const n=Math.min(count(S.level,w),NEED);let h='<span>Stars:</span>';for(let i=0;i<NEED;i++)h+=`<span class="pip${i<n?" on":""}" aria-hidden="true">⭐</span>`;return `<div class="pips" aria-label="${n} of 3 stars">${h}</div>`;}
+
+function renderPad(msg="",cls=""){
+  const pad=$("pad"),lv=S.level;
+  if(!current||count(lv,current)>=NEED)current=nextWord(lv);
+  const modes=`<div class="modes" role="group" aria-label="Game type">
+      <button class="mode" type="button" data-m="find" aria-pressed="${S.mode==="find"}">🔊 Listen &amp; Find</button>
+      <button class="mode" type="button" data-m="read" aria-pressed="${S.mode==="read"}">📖 Read Out Loud</button></div>`;
+  if(!current){
+    pad.innerHTML=`<div class="done"><div class="trophy">🏆</div><h2>You learned every word in ${LEVELS.find(l=>l.id===lv).name}!</h2><p class="howto">Pick another level up top to keep blasting off.</p></div>`;
+    return;
+  }
+  if(S.mode==="find"){
+    const opts=shuffle([current,...distractors(lv,current)]);
+    pad.innerHTML=`${modes}
+      <p class="howto">${canSpeak?"Listen to the word, then tap the one you hear.":"This device can't talk. Ask a grown-up to say the word, then tap it."}</p>
+      ${canSpeak?`<button class="speak" id="hear" type="button">🔊 Hear the word</button>`:""}
+      <div class="choices">${opts.map(o=>`<button class="choice" type="button" data-w="${o.replace(/"/g,"&quot;")}">${o}</button>`).join("")}</div>
+      ${pips(current)}
+      <p class="msg ${cls}">${msg}</p>`;
+    pad.querySelectorAll(".choice").forEach(b=>b.onclick=()=>pickChoice(b));
+    const h=$("hear");if(h)h.onclick=()=>{audio();say(current);};
+  }else{
+    pad.innerHTML=`${modes}
+      <p class="howto">Read this word out loud to a grown-up.</p>
+      <div class="bigword" id="big">${current}</div>
+      <span class="gate">Grown-up taps:</span>
+      <div class="judge"><button class="yes" id="yes" type="button">✓ Read it right!</button><button class="no" id="no" type="button">Not yet</button></div>
+      ${pips(current)}
+      <p class="msg ${cls}">${msg}</p>`;
+    $("yes").onclick=()=>{if(locked)return;$("big").classList.add("right");correct();};
+    $("no").onclick=()=>{if(locked)return;$("big").classList.add("wrong");miss();};
+  }
+  pad.querySelectorAll(".mode").forEach(b=>b.onclick=()=>{S.mode=b.dataset.m;save();renderPad();});
+}
+
+function renderShelf(){
+  const lv=S.level,k=known(lv),box=$("chips");
+  $("shelfCount").textContent=`${k.length} in ${LEVELS.find(l=>l.id===lv).name}`;
+  if(!k.length){box.innerHTML=`<p class="empty">Words you learn will land here. They won't come up again!</p>`;return;}
+  box.innerHTML="";
+  k.forEach(w=>{
+    const c=document.createElement("span");c.className="chip"+(w===justKnown?" new":"");
+    const t=document.createElement("button");t.type="button";t.textContent=w;t.style.cssText="border:0;background:none;font:inherit;padding:0";t.title="Hear it";t.onclick=()=>{audio();say(w);};
+    const b=document.createElement("button");b.type="button";b.className="back";b.textContent="↩";b.title="Practice this word again";b.setAttribute("aria-label","Practice "+w+" again");
+    b.onclick=()=>{prog(lv)[w]=0;save();renderAll();};
+    c.append(t,b);box.appendChild(c);
+  });
+  justKnown=null;
+}
+
+function renderGrown(){
+  $("wordEdit").value=words(S.level).join("\n");
+  $("kidName").value=S.name||"";
+  $("saveNote").textContent="";
+  $("resetRow").innerHTML=`<button class="btn danger" id="resetLevel" type="button">Start this level over</button>`;
+  $("resetLevel").onclick=askReset;
+}
+function askReset(){
+  $("resetRow").innerHTML=`<span class="note">Clear all stars and known words in this level?</span><button class="btn danger" id="yesReset" type="button">Yes, start over</button><button class="btn" id="noReset" type="button">Cancel</button>`;
+  $("yesReset").onclick=()=>{S.prog[S.level]={};save();current=null;renderAll();};
+  $("noReset").onclick=renderGrown;
+}
+
+function renderAll(){renderTabs();renderPad();renderShelf();renderGrown();}
+
+/* ---------- play ---------- */
+function pickChoice(btn){
+  if(locked)return;audio();
+  if(btn.dataset.w===current){
+    btn.classList.add("right");
+    $("pad").querySelectorAll(".choice").forEach(b=>b.disabled=true);
+    correct();
+  }else{
+    btn.classList.add("wrong");btn.disabled=true;miss();
+  }
+}
+function correct(){
+  locked=true;const lv=S.level,w=current;
+  prog(lv)[w]=count(lv,w)+1;save();
+  ding();
+  const pp=$("pad").querySelector(".pips");if(pp)pp.outerHTML=pips(w);
+  const m=$("pad").querySelector(".msg");if(m){m.className="msg good";m.textContent=CHEERS[Math.random()*CHEERS.length|0];}
+  if(count(lv,w)>=NEED){
+    setTimeout(()=>celebrate(w),550);
+  }else{
+    setTimeout(()=>{last=w;current=null;locked=false;renderPad();if(S.mode==="find")say(nextSpoken());},1000);
+  }
+}
+function nextSpoken(){return current;}
+function miss(){
+  boop();
+  const m=$("pad").querySelector(".msg");
+  if(S.mode==="find"){if(m){m.className="msg oops";m.textContent="Oops! Listen again and try another one.";}setTimeout(()=>say(current),500);}
+  else{locked=true;if(m){m.className="msg oops";m.textContent=`That word is "${current}". Let's try it again later!`;}say(current);
+    setTimeout(()=>{last=current;current=null;locked=false;renderPad();},2200);}
+}
+
+function celebrate(w){
+  justKnown=w;
+  $("buddy").textContent=BUDDIES[Math.random()*BUDDIES.length|0];
+  const left=unknown(S.level).length;
+  $("partyTitle").textContent=left?"You know this word!":"You finished the whole level!";
+  $("partyWord").textContent=w;
+  $("party").hidden=false;$("partyOk").focus();
+  fanfare();confetti(left?140:320);
+  setTimeout(()=>say((S.name?S.name+", ":"")+"you learned "+(SAY[w]||w)+"!",.95),700);
+}
+$("partyOk").onclick=()=>{
+  $("party").hidden=true;last=current;current=null;locked=false;renderAll();
+  if(S.mode==="find"&&current)setTimeout(()=>say(current),300);
+};
+
+/* ---------- confetti ---------- */
+const cv=$("fx"),cx=cv.getContext("2d");let parts=[],raf=0;
+const reduce=window.matchMedia&&matchMedia("(prefers-reduced-motion: reduce)").matches;
+function confetti(n){
+  if(reduce)return;
+  const W=cv.width=innerWidth*devicePixelRatio,H=cv.height=innerHeight*devicePixelRatio;
+  const cols=["#FFC53D","#F0476B","#6A55F0","#2FB36E","#2FA0D8","#F08A24"];
+  for(let i=0;i<n;i++)parts.push({x:W/2+(Math.random()-.5)*W*.3,y:H*.55,vx:(Math.random()-.5)*28*devicePixelRatio,vy:-(Math.random()*26+14)*devicePixelRatio,r:(Math.random()*7+5)*devicePixelRatio,c:cols[i%cols.length],a:Math.random()*6,va:(Math.random()-.5)*.4,star:Math.random()<.25});
+  if(!raf)tick();
+}
+function tick(){
+  const W=cv.width,H=cv.height;cx.clearRect(0,0,W,H);
+  parts.forEach(p=>{p.vy+=.9*devicePixelRatio;p.vx*=.985;p.x+=p.vx;p.y+=p.vy;p.a+=p.va;cx.save();cx.translate(p.x,p.y);cx.rotate(p.a);cx.fillStyle=p.c;
+    if(p.star){cx.beginPath();for(let i=0;i<10;i++){const r=i%2?p.r*.45:p.r*1.2,t=i*Math.PI/5;cx.lineTo(Math.cos(t)*r,Math.sin(t)*r);}cx.fill();}
+    else cx.fillRect(-p.r/2,-p.r/4,p.r,p.r/2);cx.restore();});
+  parts=parts.filter(p=>p.y<H+40);
+  raf=parts.length?requestAnimationFrame(tick):(cx.clearRect(0,0,W,H),0);
+}
+
+/* ---------- grown-up tools ---------- */
+$("kidName").addEventListener("input",e=>{S.name=e.target.value.trim();save();renderTabs();});
+$("saveWords").onclick=()=>{
+  const list=[...new Set($("wordEdit").value.split(/[\n,]+/).map(s=>s.trim()).filter(Boolean))];
+  if(!list.length){$("saveNote").textContent="Add at least one word first.";return;}
+  S.lists[S.level]=list;save();current=null;renderTabs();renderPad();renderShelf();
+  $("saveNote").textContent=`Saved ${list.length} words.`;
+};
+$("restoreWords").onclick=()=>{delete S.lists[S.level];save();current=null;renderAll();$("saveNote").textContent="Back to the original list.";};
+document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!$("party").hidden)$("partyOk").click();});
+
+renderAll();
+})();
+</script>
+
+</body>
+</html>
