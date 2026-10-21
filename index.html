@@ -172,7 +172,15 @@ canvas#fx{position:fixed;inset:0;pointer-events:none;z-index:60;width:100%;heigh
       <div class="row" id="resetRow">
         <button class="btn danger" id="resetLevel" type="button">Start this level over</button>
       </div>
-      <p class="note">Progress is saved in this browser on this device.</p>
+      <p class="note">Progress saves by itself in this browser on this device. To move it to another device, copy the progress code here and load it there.</p>
+      <label for="progCode">Progress code
+        <textarea id="progCode" spellcheck="false" placeholder="Tap Copy progress code, or paste a code from another device here"></textarea>
+      </label>
+      <div class="row">
+        <button class="btn solid" id="copyCode" type="button">Copy progress code</button>
+        <button class="btn" id="loadCode" type="button">Load this code</button>
+        <span class="note" id="codeNote" role="status"></span>
+      </div>
     </div>
   </details>
 </div>
@@ -232,12 +240,22 @@ function say(t,rate=.8){if(!("speechSynthesis" in window))return;try{speechSynth
 const canSpeak="speechSynthesis" in window;
 
 /* ---------- picking ---------- */
+const BREAK="__break__";let resting=false;
+const D=lv=>{S.decks=S.decks||{};return S.decks[lv]=S.decks[lv]||{q:[],n:0};};
+Object.values(S.decks||{}).forEach(d=>{if(d&&!d.q.length)d.n=0;});
 function nextWord(lv){
-  const pool=unknown(lv).slice(0,ACTIVE);
-  if(!pool.length)return null;
-  const opts=pool.length>1?pool.filter(w=>w!==last):pool;
-  return opts[Math.random()*opts.length|0];
+  const left=unknown(lv);
+  if(!left.length)return null;
+  const d=D(lv);
+  d.q=d.q.filter(w=>left.includes(w));
+  if(!d.q.length){
+    if(d.n>0){save();return BREAK;}
+    d.q=shuffle(left);
+    if(d.q.length>1&&d.q[0]===last){const j=1+(Math.random()*(d.q.length-1)|0);[d.q[0],d.q[j]]=[d.q[j],d.q[0]];}
+  }
+  d.n++;const w=d.q.shift();save();return w;
 }
+function reshuffle(){const d=D(S.level);d.q=[];d.n=0;current=null;resting=false;renderPad();}
 function distractors(lv,target){
   const all=[...new Set(words(lv).concat(DEFAULTS[lv]))].filter(w=>w.toLowerCase()!==target.toLowerCase());
   const t=target.toLowerCase();
@@ -253,7 +271,7 @@ function renderTabs(){
     b.setAttribute("aria-selected",S.level===l.id);b.style.setProperty("--c",l.c);
     const k=known(l.id).length,n=words(l.id).length;
     b.innerHTML=`<b>${l.name}</b><small>${l.sub}</small><small>${k} of ${n} known</small><span class="meter"><i style="width:${n?k/n*100:0}%"></i></span>`;
-    b.onclick=()=>{if(S.level===l.id)return;S.level=l.id;save();current=null;last=null;renderAll();};
+    b.onclick=()=>{if(S.level===l.id)return;S.level=l.id;save();current=null;last=null;resting=false;renderAll();};
     nav.appendChild(b);
   });
   let total=0;LEVELS.forEach(l=>total+=known(l.id).length);$("totalKnown").textContent=total;
@@ -267,6 +285,19 @@ function renderPad(msg="",cls=""){
   if(!current||count(lv,current)>=NEED)current=nextWord(lv);
   if(!current){
     pad.innerHTML=`<div class="done"><div class="trophy">🏆</div><h2>You learned every word in ${LEVELS.find(l=>l.id===lv).name}!</h2><p class="howto">Pick another level up top to keep blasting off.</p></div>`;
+    return;
+  }
+  if(current===BREAK){
+    const k=known(lv).length,n=words(lv).length;
+    if(resting){
+      pad.innerHTML=`<div class="done"><div class="trophy">😴</div><h2>Great reading today!</h2><p class="howto">Your stars are saved. Come back later to keep going.</p><button class="yes" id="again" type="button">Play again</button></div>`;
+      $("again").onclick=reshuffle;
+    }else{
+      pad.innerHTML=`<div class="done"><div class="trophy">🎉</div><h2>You read all the words!</h2><p class="howto">You know ${k} of ${n} words in this level. What do you want to do?</p>
+        <div class="judge"><button class="yes" id="shuf" type="button">🔀 Reshuffle</button><button class="no" id="later" type="button">⏰ Try again later</button></div></div>`;
+      $("shuf").onclick=reshuffle;
+      $("later").onclick=()=>{resting=true;renderPad();};
+    }
     return;
   }
   pad.innerHTML=`<p class="howto">Read this word out loud. Did you get it right?</p>
@@ -302,7 +333,7 @@ function renderGrown(){
 }
 function askReset(){
   $("resetRow").innerHTML=`<span class="note">Clear all stars and known words in this level?</span><button class="btn danger" id="yesReset" type="button">Yes, start over</button><button class="btn" id="noReset" type="button">Cancel</button>`;
-  $("yesReset").onclick=()=>{S.prog[S.level]={};save();current=null;renderAll();};
+  $("yesReset").onclick=()=>{S.prog[S.level]={};D(S.level).q=[];D(S.level).n=0;save();current=null;resting=false;renderAll();};
   $("noReset").onclick=renderGrown;
 }
 
@@ -377,10 +408,27 @@ $("kidName").addEventListener("input",e=>{S.name=e.target.value.trim();save();re
 $("saveWords").onclick=()=>{
   const list=[...new Set($("wordEdit").value.split(/[\n,]+/).map(s=>s.trim()).filter(Boolean))];
   if(!list.length){$("saveNote").textContent="Add at least one word first.";return;}
-  S.lists[S.level]=list;save();current=null;renderTabs();renderPad();renderShelf();
+  S.lists[S.level]=list;D(S.level).q=[];D(S.level).n=0;save();current=null;renderTabs();renderPad();renderShelf();
   $("saveNote").textContent=`Saved ${list.length} words.`;
 };
 $("restoreWords").onclick=()=>{delete S.lists[S.level];save();current=null;renderAll();$("saveNote").textContent="Back to the original list.";};
+$("copyCode").onclick=()=>{
+  const code="WR1:"+btoa(unescape(encodeURIComponent(JSON.stringify({name:S.name,lists:S.lists,prog:S.prog}))));
+  const ta=$("progCode");ta.value=code;ta.focus();ta.select();
+  const ok=()=>$("codeNote").textContent="Copied! Paste it into Word Rockets on the other device.";
+  try{navigator.clipboard.writeText(code).then(ok,()=>$("codeNote").textContent="Code selected. Copy it with Ctrl+C or Cmd+C.");}catch(e){$("codeNote").textContent="Code selected. Copy it with Ctrl+C or Cmd+C.";}
+};
+$("loadCode").onclick=()=>{
+  const raw=$("progCode").value.trim();
+  try{
+    if(!raw.startsWith("WR1:"))throw 0;
+    const d=JSON.parse(decodeURIComponent(escape(atob(raw.slice(4)))));
+    if(typeof d!=="object"||!d.prog)throw 0;
+    S.name=d.name||"";S.lists=d.lists||{};S.prog=d.prog;S.decks={};save();
+    current=null;resting=false;renderAll();
+    $("codeNote").textContent="Progress loaded!";
+  }catch(e){$("codeNote").textContent="That code didn't work. Copy the whole code and try again.";}
+};
 document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!$("party").hidden)$("partyOk").click();});
 
 renderAll();
