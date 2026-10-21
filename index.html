@@ -265,35 +265,17 @@ function pips(w){const n=Math.min(count(S.level,w),NEED);let h='<span>Stars:</sp
 function renderPad(msg="",cls=""){
   const pad=$("pad"),lv=S.level;
   if(!current||count(lv,current)>=NEED)current=nextWord(lv);
-  const modes=`<div class="modes" role="group" aria-label="Game type">
-      <button class="mode" type="button" data-m="find" aria-pressed="${S.mode==="find"}">🔊 Listen &amp; Find</button>
-      <button class="mode" type="button" data-m="read" aria-pressed="${S.mode==="read"}">📖 Read Out Loud</button></div>`;
   if(!current){
     pad.innerHTML=`<div class="done"><div class="trophy">🏆</div><h2>You learned every word in ${LEVELS.find(l=>l.id===lv).name}!</h2><p class="howto">Pick another level up top to keep blasting off.</p></div>`;
     return;
   }
-  if(S.mode==="find"){
-    const opts=shuffle([current,...distractors(lv,current)]);
-    pad.innerHTML=`${modes}
-      <p class="howto">${canSpeak?"Listen to the word, then tap the one you hear.":"This device can't talk. Ask a grown-up to say the word, then tap it."}</p>
-      ${canSpeak?`<button class="speak" id="hear" type="button">🔊 Hear the word</button>`:""}
-      <div class="choices">${opts.map(o=>`<button class="choice" type="button" data-w="${o.replace(/"/g,"&quot;")}">${o}</button>`).join("")}</div>
-      ${pips(current)}
-      <p class="msg ${cls}">${msg}</p>`;
-    pad.querySelectorAll(".choice").forEach(b=>b.onclick=()=>pickChoice(b));
-    const h=$("hear");if(h)h.onclick=()=>{audio();say(current);};
-  }else{
-    pad.innerHTML=`${modes}
-      <p class="howto">Read this word out loud to a grown-up.</p>
-      <div class="bigword" id="big">${current}</div>
-      <span class="gate">Grown-up taps:</span>
-      <div class="judge"><button class="yes" id="yes" type="button">✓ Read it right!</button><button class="no" id="no" type="button">Not yet</button></div>
-      ${pips(current)}
-      <p class="msg ${cls}">${msg}</p>`;
-    $("yes").onclick=()=>{if(locked)return;$("big").classList.add("right");correct();};
-    $("no").onclick=()=>{if(locked)return;$("big").classList.add("wrong");miss();};
-  }
-  pad.querySelectorAll(".mode").forEach(b=>b.onclick=()=>{S.mode=b.dataset.m;save();renderPad();});
+  pad.innerHTML=`<p class="howto">Read this word out loud. Did you get it right?</p>
+    <div class="bigword" id="big">${current}</div>
+    <div class="judge"><button class="yes" id="yes" type="button">✓ I got it!</button><button class="no" id="no" type="button">✗ No</button></div>
+    ${pips(current)}
+    <p class="msg ${cls}">${msg}</p>`;
+  $("yes").onclick=()=>{if(locked)return;audio();$("big").classList.add("right");correct();};
+  $("no").onclick=()=>{if(locked)return;audio();$("big").classList.add("wrong");miss();};
 }
 
 function renderShelf(){
@@ -346,16 +328,15 @@ function correct(){
   if(count(lv,w)>=NEED){
     setTimeout(()=>celebrate(w),550);
   }else{
-    setTimeout(()=>{last=w;current=null;locked=false;renderPad();if(S.mode==="find")say(nextSpoken());},1000);
+    setTimeout(()=>{last=w;current=null;locked=false;renderPad();},1000);
   }
 }
-function nextSpoken(){return current;}
 function miss(){
-  boop();
+  boop();locked=true;
   const m=$("pad").querySelector(".msg");
-  if(S.mode==="find"){if(m){m.className="msg oops";m.textContent="Oops! Listen again and try another one.";}setTimeout(()=>say(current),500);}
-  else{locked=true;if(m){m.className="msg oops";m.textContent=`That word is "${current}". Let's try it again later!`;}say(current);
-    setTimeout(()=>{last=current;current=null;locked=false;renderPad();},2200);}
+  if(m){m.className="msg oops";m.textContent=`That word is "${current}". We'll try it again soon!`;}
+  say(current);
+  setTimeout(()=>{last=current;current=null;locked=false;renderPad();},2200);
 }
 
 function celebrate(w){
@@ -370,7 +351,6 @@ function celebrate(w){
 }
 $("partyOk").onclick=()=>{
   $("party").hidden=true;last=current;current=null;locked=false;renderAll();
-  if(S.mode==="find"&&current)setTimeout(()=>say(current),300);
 };
 
 /* ---------- confetti ---------- */
