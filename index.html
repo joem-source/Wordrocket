@@ -116,6 +116,24 @@ details.grown summary{font-family:var(--display);font-weight:600;font-size:18px;
 .toggle-show{display:flex;gap:8px;align-items:center;font-size:16px}
 .toggle-show.hide-known .chip .back{display:none}
 
+/* math */
+.bigword.math{font-size:clamp(44px,11vw,96px)}
+.ans{display:inline-block;min-width:1.3em;color:var(--grape);border-bottom:6px solid var(--line);text-align:center}
+.ans.empty{color:var(--line)}
+.ans.good{color:var(--grass);border-color:var(--grass)}
+.ans.bad{color:var(--berry);border-color:var(--berry);text-decoration:line-through}
+.numpad{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;width:100%;max-width:330px}
+.key{border:3px solid var(--ink);background:var(--paper);border-radius:16px;font-family:var(--display);font-weight:700;font-size:30px;padding:10px 0;box-shadow:0 4px 0 var(--ink)}
+.key:active{transform:translateY(3px);box-shadow:0 1px 0 var(--ink)}
+.key.go{background:var(--grass);color:#fff;font-size:24px}
+.key.del{background:var(--sky);font-size:26px}
+.key:disabled{opacity:.6;cursor:default}
+.maker{display:flex;flex-direction:column;gap:10px;background:var(--paper);border-radius:14px;padding:12px 14px}
+.mk-title{font-family:var(--display);font-weight:700;font-size:17px}
+.tables{display:flex;flex-wrap:wrap;gap:8px}
+.gbody .tables label{flex-direction:row;align-items:center;gap:6px;border:2px solid var(--line);border-radius:10px;padding:4px 10px;font-size:17px}
+.gbody .tables input{width:auto;margin:0}
+
 /* rocket fuel panel */
 .stage{display:grid;grid-template-columns:210px minmax(0,1fr);gap:18px;align-items:stretch}
 .stage>*{min-width:0}
@@ -187,9 +205,9 @@ canvas#fx{position:fixed;inset:0;pointer-events:none;z-index:60;width:100%;heigh
   <header>
     <div>
       <h1><span class="rk" aria-hidden="true">🚀</span> Word Rockets</h1>
-      <p class="hello" id="hello">Get 3 stars on a word to launch it!</p>
+      <p class="hello" id="hello">Get 3 stars to fuel your rocket!</p>
     </div>
-    <div class="stars" aria-label="Words learned"><span aria-hidden="true">⭐</span><span id="totalKnown">0</span> words learned</div>
+    <div class="stars" aria-label="Words learned"><span aria-hidden="true">⭐</span><span id="totalKnown">0</span> learned</div>
   </header>
 
   <nav class="tabs" id="tabs" role="tablist" aria-label="Levels"></nav>
@@ -233,7 +251,7 @@ canvas#fx{position:fixed;inset:0;pointer-events:none;z-index:60;width:100%;heigh
   </div>
 
   <section class="shelf">
-    <h2>🌟 Known Words <span id="shelfCount"></span></h2>
+    <h2>🌟 <b id="shelfTitle">Known Words</b> <span id="shelfCount"></span></h2>
     <div class="chips" id="chips"></div>
   </section>
 
@@ -243,7 +261,7 @@ canvas#fx{position:fixed;inset:0;pointer-events:none;z-index:60;width:100%;heigh
       <label for="kidName">Reader's name
         <input id="kidName" type="text" maxlength="24" placeholder="e.g. Bradley" autocomplete="off">
       </label>
-      <div class="row"><button class="btn solid" id="addLevel" type="button">+ Add a new level</button></div>
+      <div class="row"><button class="btn solid" id="addLevel" type="button">+ Add a word level</button><button class="btn solid" id="addMath" type="button">+ Add a math level</button></div>
       <p class="note" id="editingNote"></p>
       <label for="lvName">Level name
         <input id="lvName" type="text" maxlength="20" autocomplete="off">
@@ -256,7 +274,16 @@ canvas#fx{position:fixed;inset:0;pointer-events:none;z-index:60;width:100%;heigh
       </label>
       <div class="row"><button class="btn" id="voiceTest" type="button">▶ Test this voice</button></div>
       <p class="note">The best voices are listed first. On an iPad or iPhone, you can download nicer ones in Settings → Accessibility → Spoken Content → Voices → English (look for “Enhanced” or “Premium,” like Ava or Zoe). On Windows, the Edge browser has very natural “Online (Natural)” voices.</p>
-      <label for="wordEdit">Words in this level (one per line or separated by commas)
+      <div class="maker" id="mathMaker" hidden>
+        <span class="mk-title">Times table maker</span>
+        <div class="tables" id="mkTables"></div>
+        <label for="mkUpTo">Up to
+          <select id="mkUpTo"><option value="5">× 5</option><option value="10" selected>× 10</option><option value="12">× 12</option></select>
+        </label>
+        <div class="row"><button class="btn" id="mkGo" type="button">Put these facts in the list</button></div>
+        <p class="note">Then tap Save this level.</p>
+      </div>
+      <label for="wordEdit"><span id="wordLabel">Words in this level (one per line or separated by commas)</span>
         <textarea id="wordEdit" spellcheck="false"></textarea>
       </label>
       <div class="row">
@@ -297,9 +324,13 @@ canvas#fx{position:fixed;inset:0;pointer-events:none;z-index:60;width:100%;heigh
 const LEVELS=[
   {id:"t2b",name:"2B Words",sub:"Trick words",c:"#6A55F0",words:"also dollar heard once together beautiful earth hurry picture body tomorrow enough learn quiet trouble eye listen bought quite watch build friendly money sentence weather carry noise spring whose gone"},
   {id:"t1r",name:"1R Words",sub:"Trick words",c:"#2FA0D8",words:"answer|Ave.|been|believe|bicycle|board|bottom|climb|country|done|Dr.|early|field|front|giant|idea|library|machine|million|minute|mountain|move|Mr.|Mrs.|Ms.|piece|quarter|question|second|shall|sign|sorry|special|St.|stomach|tough|warm|weigh|whistle"},
-  {id:"t2r",name:"2R Bonus",sub:"Practice if you want",c:"#2FB36E",words:"accident among beauty blood blossom borrow bowl breath breathe calendar calm canoe captain carrot cellar certain certainly chief chocolate closet cloth comb comfortable common continue courage cousin curtain danger daughter diamond drawer either English except famous forward future garage island lose meant mirror mischief muscle necklace neither ocean pleasant rescue scene swallow tomato tongue toward vegetable wisdom worry worse"}
+  {id:"t2r",name:"2R Bonus",sub:"Practice if you want",c:"#2FB36E",words:"accident among beauty blood blossom borrow bowl breath breathe calendar calm canoe captain carrot cellar certain certainly chief chocolate closet cloth comb comfortable common continue courage cousin curtain danger daughter diamond drawer either English except famous forward future garage island lose meant mirror mischief muscle necklace neither ocean pleasant rescue scene swallow tomato tongue toward vegetable wisdom worry worse"},
+  {id:"m1",name:"Times Tables",sub:"1s to 5s and 10s",c:"#D6427F",type:"math",words:""}
 ];
-const DEFAULTS={};LEVELS.forEach(l=>DEFAULTS[l.id]=l.words.split(/[|\s]+/).filter(Boolean));
+const DEFAULTS={};LEVELS.forEach(l=>DEFAULTS[l.id]=l.type==="math"?makeFacts([1,2,3,4,5,10],10):l.words.split(/[|\s]+/).filter(Boolean));
+function parseFact(w){const m=String(w).match(/^\s*(\d{1,2})\s*[x×*]\s*(\d{1,2})\s*$/i);return m?[+m[1],+m[2]]:null;}
+function makeFacts(tables,upTo){const o=[];tables.forEach(t=>{for(let i=1;i<=upTo;i++)o.push(`${t} × ${i}`);});return o;}
+const factAns=w=>{const f=parseFact(w);return f?f[0]*f[1]:null;};
 const COLORS=["#F08A24","#E0559A","#0EA5A0","#8B5CF6","#D97706","#2563EB"];
 function levels(){const rm=S.removed||[];return LEVELS.filter(l=>!rm.includes(l.id)).concat(S.custom||[]);}
 const lvObj=lv=>levels().find(l=>l.id===lv)||LEVELS.find(l=>l.id===lv)||{name:"Level",sub:""};
@@ -319,8 +350,12 @@ function fit(el){
 const fitAll=()=>{fit(document.getElementById("big"));if(!document.getElementById("party").hidden)fit(document.getElementById("partyWord"));};
 const lvName=lv=>T(lv).name||lvObj(lv).name;
 const lvSub=lv=>T(lv).sub||lvObj(lv).sub;
+const isMath=lv=>lvObj(lv).type==="math";
+const U=lv=>isMath(lv)?{one:"fact",many:"facts"}:{one:"word",many:"words"};
+const spoken=w=>{const f=parseFact(w);return f?`${f[0]} times ${f[1]} is ${f[0]*f[1]}`:(SAY[w]||w);};
+const shown=w=>{const f=parseFact(w);return f?`${w} = ${f[0]*f[1]}`:w;};
 const BUDDIES=["🦖","🐙","🦄","🐶","🐸","🦊","🐼","🐯","🦒","🐳","🦕","🐵","🚀","🤖","🐲","🦁"];
-const CHEERS=["Awesome!","You got it!","Super reading!","Yes!","Great job!","Wow!","Nice one!"];
+const CHEERS=["Awesome!","You got it!","Super!","Yes!","Great job!","Wow!","Nice one!"];
 const KEY="wordRockets.v1";
 
 let S={name:"",level:"t2b",lists:{},prog:{},custom:[],removed:[]};
@@ -392,7 +427,7 @@ function renderTabs(){
     nav.appendChild(b);
   });
   let total=0;levels().forEach(l=>total+=known(l.id).length);$("totalKnown").textContent=total;
-  $("hello").textContent=S.name?`Hi ${S.name}! Get 3 stars on a word to launch it!`:"Get 3 stars on a word to launch it!";
+  $("hello").textContent=S.name?`Hi ${S.name}! Get 3 stars to fuel your rocket!`:"Get 3 stars to fuel your rocket!";
 }
 
 function pips(w){const n=Math.min(count(S.level,w),NEED);let h='<span>Stars:</span>';for(let i=0;i<NEED;i++)h+=`<span class="pip${i<n?" on":""}" aria-hidden="true">⭐</span>`;return `<div class="pips" aria-label="${n} of 3 stars">${h}</div>`;}
@@ -400,12 +435,12 @@ function pips(w){const n=Math.min(count(S.level,w),NEED);let h='<span>Stars:</sp
 function renderPad(msg="",cls=""){
   const pad=$("pad"),lv=S.level;
   if(!words(lv).length){
-    pad.innerHTML=`<div class="done"><div class="trophy">📝</div><h2>No words here yet</h2><p class="howto">A grown-up can add words to this level in the Grown-ups section below.</p></div>`;
+    pad.innerHTML=`<div class="done"><div class="trophy">📝</div><h2>No ${U(lv).many} here yet</h2><p class="howto">A grown-up can add ${U(lv).many} to this level in the Grown-ups section below.</p></div>`;
     return;
   }
   if(!current||count(lv,current)>=NEED)current=nextWord(lv);
   if(!current){
-    pad.innerHTML=`<div class="done"><div class="trophy">🏆</div><h2>You learned every word in ${esc(lvName(lv))}!</h2><p class="howto">Your rocket made it to space! Pick another level up top to fuel up the next one.</p></div>`;
+    pad.innerHTML=`<div class="done"><div class="trophy">🏆</div><h2>You learned every ${U(lv).one} in ${esc(lvName(lv))}!</h2><p class="howto">Your rocket made it to space! Pick another level up top to fuel up the next one.</p></div>`;
     return;
   }
   if(current===BREAK){
@@ -414,11 +449,22 @@ function renderPad(msg="",cls=""){
       pad.innerHTML=`<div class="done"><div class="trophy">😴</div><h2>Great reading today!</h2><p class="howto">Your stars are saved. Come back later to keep going.</p><button class="yes" id="again" type="button">Play again</button></div>`;
       $("again").onclick=reshuffle;
     }else{
-      pad.innerHTML=`<div class="done"><div class="trophy">🎉</div><h2>You read all the words!</h2><p class="howto">You know ${k} of ${n} words in this level. What do you want to do?</p>
+      pad.innerHTML=`<div class="done"><div class="trophy">🎉</div><h2>${isMath(lv)?"You did all the facts!":"You read all the words!"}</h2><p class="howto">You know ${k} of ${n} ${U(lv).many} in this level. What do you want to do?</p>
         <div class="judge"><button class="yes" id="shuf" type="button">🔀 Reshuffle</button><button class="no" id="later" type="button">⏰ Try again later</button></div></div>`;
       $("shuf").onclick=reshuffle;
       $("later").onclick=()=>{resting=true;renderPad();};
     }
+    return;
+  }
+  if(isMath(lv)){
+    typed="";
+    pad.innerHTML=`<p class="howto">What's the answer? Tap the numbers, then tap Go.</p>
+      <div class="bigword math" id="big">${esc(current)} = <span class="ans empty" id="ans">?</span></div>
+      <div class="numpad" id="numpad">${["1","2","3","4","5","6","7","8","9","⌫","0","Go"].map(k=>`<button type="button" class="key${k==="Go"?" go":k==="⌫"?" del":""}" data-k="${k}" aria-label="${k==="⌫"?"Delete":k}">${k}</button>`).join("")}</div>
+      ${pips(current)}
+      <p class="msg ${cls}">${msg}</p>`;
+    pad.querySelectorAll(".key").forEach(b=>b.onclick=()=>press(b.dataset.k));
+    fit($("big"));
     return;
   }
   pad.innerHTML=`<p class="howto">Read this word out loud. Did you get it right?</p>
@@ -431,14 +477,29 @@ function renderPad(msg="",cls=""){
   fit($("big"));
 }
 
+let typed="";
+function press(k){
+  const a=$("ans");if(locked||!a||!isMath(S.level))return;audio();
+  if(k==="Go"){if(typed)checkAns();return;}
+  if(k==="⌫")typed=typed.slice(0,-1);
+  else if(typed.length<3){typed+=k;tone(660,0,.06,"sine",.06);}
+  a.textContent=typed||"?";a.classList.toggle("empty",!typed);fit($("big"));
+}
+function checkAns(){
+  const a=$("ans"),ok=+typed===factAns(current);
+  $("pad").querySelectorAll(".key").forEach(b=>b.disabled=true);
+  a.classList.add(ok?"good":"bad");$("big").classList.add(ok?"right":"wrong");
+  ok?correct():miss();
+}
 function renderShelf(){
   const lv=S.level,k=known(lv),box=$("chips");
+  $("shelfTitle").textContent=isMath(lv)?"Known Facts":"Known Words";
   $("shelfCount").textContent=`${k.length} in ${lvName(lv)}`;
-  if(!k.length){box.innerHTML=`<p class="empty">Words you learn will land here. They won't come up again!</p>`;return;}
+  if(!k.length){box.innerHTML=`<p class="empty">${isMath(lv)?"Facts":"Words"} you learn will land here. They won't come up again!</p>`;return;}
   box.innerHTML="";
   k.forEach(w=>{
     const c=document.createElement("span");c.className="chip"+(w===justKnown?" new":"");
-    const t=document.createElement("button");t.type="button";t.textContent=w;t.style.cssText="border:0;background:none;font:inherit;padding:0";t.title="Hear it";t.onclick=()=>{audio();say(w);};
+    const t=document.createElement("button");t.type="button";t.textContent=shown(w);t.style.cssText="border:0;background:none;font:inherit;padding:0";t.title="Hear it";t.onclick=()=>{audio();say(spoken(w));};
     const b=document.createElement("button");b.type="button";b.className="back";b.textContent="↩";b.title="Practice this word again";b.setAttribute("aria-label","Practice "+w+" again");
     b.onclick=()=>{prog(lv)[w]=0;save();renderAll();};
     c.append(t,b);box.appendChild(c);
@@ -448,6 +509,10 @@ function renderShelf(){
 
 function renderGrown(){
   $("wordEdit").value=words(S.level).join("\n");
+  const m=isMath(S.level);$("mathMaker").hidden=!m;
+  $("wordLabel").textContent=m?"Facts in this level (like 3 x 4, one per line)":"Words in this level (one per line or separated by commas)";
+  $("restoreWords").textContent=m?"Use the original facts":"Use the original words";
+  if(m){const ts=new Set(words(S.level).map(w=>(parseFact(w)||[])[0]));$("mkTables").querySelectorAll("input").forEach(c=>c.checked=ts.has(+c.value));}
   $("lvName").value=lvName(S.level);$("lvSub").value=lvSub(S.level);
   $("editingNote").innerHTML=`Editing the <b>${esc(lvName(S.level))}</b> level. Tap a different level up top to edit that one.`;
   $("kidName").value=S.name||"";
@@ -486,7 +551,7 @@ function renderTank(){
   if(launching)return;
   const t=$("tank");t.classList.remove("launch");t.classList.toggle("space",full);
   $("tankTitle").textContent=full?"In space!":"Rocket fuel";
-  $("tankCount").textContent=full?`All ${n} words known`:`${k} of ${n} words`;
+  $("tankCount").textContent=full?`All ${n} ${U(lv).many} known`:`${k} of ${n} ${U(lv).many}`;
 }
 function rumble(){const a=audio();if(!a)return;const len=a.sampleRate*3,buf=a.createBuffer(1,len,a.sampleRate),d=buf.getChannelData(0);for(let i=0;i<len;i++)d[i]=Math.random()*2-1;const s=a.createBufferSource();s.buffer=buf;const f=a.createBiquadFilter();f.type="lowpass";f.frequency.value=380;const g=a.createGain();g.gain.setValueAtTime(0,a.currentTime);g.gain.linearRampToValueAtTime(.5,a.currentTime+.6);g.gain.linearRampToValueAtTime(0,a.currentTime+3);s.connect(f).connect(g).connect(a.destination);s.start();}
 function launch(){
@@ -511,20 +576,22 @@ function correct(){
   locked=true;const lv=S.level,w=current;
   prog(lv)[w]=count(lv,w)+1;save();
   ding();
+  if(isMath(lv)&&count(lv,w)<NEED)setTimeout(()=>say(spoken(w),1),250);
   const pp=$("pad").querySelector(".pips");if(pp)pp.outerHTML=pips(w);
   const m=$("pad").querySelector(".msg");if(m){m.className="msg good";m.textContent=CHEERS[Math.random()*CHEERS.length|0];}
   if(count(lv,w)>=NEED){
     setTimeout(()=>celebrate(w),550);
   }else{
-    setTimeout(()=>{last=w;current=null;locked=false;renderPad();},1000);
+    setTimeout(()=>{last=w;current=null;locked=false;renderPad();},isMath(lv)?1700:1000);
   }
 }
 function miss(){
   boop();locked=true;
   const m=$("pad").querySelector(".msg");
-  if(m){m.className="msg oops";m.textContent=`That word is "${current}". We'll try it again soon!`;}
-  say(current);
-  setTimeout(()=>{last=current;current=null;locked=false;renderPad();},2200);
+  const math=isMath(S.level);
+  if(m){m.className="msg oops";m.textContent=math?`${current} = ${factAns(current)}. We'll try it again soon!`:`That word is "${current}". We'll try it again soon!`;}
+  say(math?spoken(current):current);
+  setTimeout(()=>{last=current;current=null;locked=false;renderPad();},math?3200:2200);
 }
 
 let pendingLaunch=false;
@@ -532,13 +599,14 @@ function celebrate(w){
   justKnown=w;
   $("buddy").textContent=BUDDIES[Math.random()*BUDDIES.length|0];
   const left=unknown(S.level).length;
-  $("partyTitle").textContent=left?"You know this word!":"Fuel tank full! You know every word!";
+  const u=U(S.level);
+  $("partyTitle").textContent=left?`You know this ${u.one}!`:`Fuel tank full! You know every ${u.one}!`;
   $("partyOk").textContent=left?"Keep going! ➜":"🚀 Launch the rocket!";
   pendingLaunch=!left;
-  $("partyWord").textContent=w;
+  $("partyWord").textContent=shown(w);
   $("party").hidden=false;fit($("partyWord"));$("partyOk").focus();
   fanfare();confetti(left?140:320);
-  setTimeout(()=>say((S.name?S.name+", ":"")+"you learned "+(SAY[w]||w)+"!",.95),700);
+  setTimeout(()=>say((S.name?S.name+", ":"")+"you learned "+spoken(w)+"!",.95),700);
 }
 $("partyOk").onclick=()=>{
   $("party").hidden=true;last=current;current=null;locked=false;
@@ -571,21 +639,33 @@ $("voiceTest").onclick=()=>{audio();say(`Great job${S.name?", "+S.name:""}! Your
 pickVoice();
 $("kidName").addEventListener("input",e=>{S.name=e.target.value.trim();save();renderTabs();});
 $("saveWords").onclick=()=>{
-  const list=[...new Set($("wordEdit").value.split(/[\n,]+/).map(s=>s.trim()).filter(Boolean))];
-  if(!list.length){$("saveNote").textContent="Add at least one word first.";return;}
+  let items=$("wordEdit").value.split(/[\n,]+/).map(s=>s.trim()).filter(Boolean),skipped=0;
+  if(isMath(S.level))items=items.map(s=>{const f=parseFact(s);if(!f){skipped++;return null;}return `${f[0]} × ${f[1]}`;}).filter(Boolean);
+  const list=[...new Set(items)];
+  if(!list.length){$("saveNote").textContent=isMath(S.level)?"Add at least one fact first, like 3 x 4.":"Add at least one word first.";return;}
   S.titles=S.titles||{};S.titles[S.level]={name:$("lvName").value.trim(),sub:$("lvSub").value.trim()};
   if(JSON.stringify(list)!==JSON.stringify(words(S.level))){S.lists[S.level]=list;D(S.level).q=[];D(S.level).n=0;current=null;}
   save();renderTabs();renderTank();renderPad();renderShelf();
   $("editingNote").innerHTML=`Editing the <b>${esc(lvName(S.level))}</b> level. Tap a different level up top to edit that one.`;
-  $("saveNote").textContent=`Saved! ${list.length} words in this level.`;
+  $("wordEdit").value=list.join("\n");
+  $("saveNote").textContent=`Saved! ${list.length} ${U(S.level).many} in this level.`+(skipped?` Skipped ${skipped} line${skipped>1?"s":""} that didn't look like 3 x 4.`:"");
 };
-$("addLevel").onclick=()=>{
+function addLvl(type){
   S.custom=S.custom||[];
-  const id="c"+Date.now().toString(36);
-  S.custom.push({id,name:"New Level",sub:"My words",c:COLORS[S.custom.length%COLORS.length]});
+  const id="c"+Date.now().toString(36),math=type==="math";
+  S.custom.push({id,name:math?"New Math":"New Level",sub:math?"Times tables":"My words",c:COLORS[S.custom.length%COLORS.length],type:math?"math":"words"});
   S.lists[id]=[];S.level=id;current=null;last=null;resting=false;save();renderAll();
-  $("saveNote").textContent="New level added! Give it a name and some words, then tap Save this level.";
+  $("saveNote").textContent=math?"New math level added! Pick tables in the maker, tap Put these facts in the list, then Save this level.":"New level added! Give it a name and some words, then tap Save this level.";
   $("lvName").focus();$("lvName").select();
+}
+$("addLevel").onclick=()=>addLvl("words");
+$("addMath").onclick=()=>addLvl("math");
+$("mkTables").innerHTML=Array.from({length:12},(_,i)=>i+1).map(n=>`<label for="mk${n}"><input type="checkbox" id="mk${n}" value="${n}"> ${n}s</label>`).join("");
+$("mkGo").onclick=()=>{
+  const ts=[...$("mkTables").querySelectorAll("input:checked")].map(c=>+c.value);
+  if(!ts.length){$("saveNote").textContent="Pick at least one table first.";return;}
+  $("wordEdit").value=makeFacts(ts,+$("mkUpTo").value).join("\n");
+  $("saveNote").textContent="Facts are in the list. Tap Save this level to use them.";
 };
 $("restoreWords").onclick=()=>{delete S.lists[S.level];save();current=null;renderAll();$("saveNote").textContent="Back to the original list.";};
 $("copyCode").onclick=()=>{
@@ -611,6 +691,13 @@ $("loadCode").onclick=()=>{
 window.addEventListener("resize",fitAll);
 try{document.fonts.ready.then(fitAll);}catch(e){}
 document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!$("party").hidden)$("partyOk").click();});
+document.addEventListener("keydown",e=>{
+  if(!$("party").hidden||!$("ans"))return;
+  const tg=e.target.tagName;if(tg==="INPUT"||tg==="TEXTAREA"||tg==="SELECT")return;
+  if(/^\d$/.test(e.key))press(e.key);
+  else if(e.key==="Backspace"){e.preventDefault();press("⌫");}
+  else if(e.key==="Enter"){e.preventDefault();press("Go");}
+});
 
 renderAll();
 })();
