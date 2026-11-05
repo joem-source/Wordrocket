@@ -51,10 +51,21 @@ h1 .rk{display:inline-block;transform:rotate(-12deg)}
 .tab small{color:var(--ink-soft);font-size:14px}
 .tab[aria-selected="true"]{border-color:var(--c);background:var(--c);color:#fff}
 .tab[aria-selected="true"] small{color:#fff}
-.meter{height:8px;border-radius:9px;background:rgba(0,0,0,.08);overflow:hidden;margin-top:4px}
-.meter i{display:block;height:100%;background:var(--grass);border-radius:9px;transition:width .4s}
-.tab[aria-selected="true"] .meter{background:rgba(255,255,255,.35)}
-.tab[aria-selected="true"] .meter i{background:#fff}
+.meter{height:10px;border-radius:9px;background:rgba(0,0,0,.08);overflow:hidden;margin-top:5px;display:flex}
+.meter i{display:block;height:100%;transition:width .6s}
+.s1{background:#FFE08A}.s2{background:#FFB020}.s3{background:var(--grass)}
+.tab[aria-selected="true"] .meter{background:rgba(0,0,0,.18)}
+.tab[aria-selected="true"] .s1{background:rgba(255,255,255,.45)}
+.tab[aria-selected="true"] .s2{background:rgba(255,255,255,.75)}
+.tab[aria-selected="true"] .s3{background:#fff}
+.tally{display:flex;justify-content:center;gap:10px;font-size:13px;font-variant-numeric:tabular-nums;margin-top:4px;color:var(--ink-soft)}
+.tab[aria-selected="true"] .tally{color:#fff}
+.tally i,.legend i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:4px;vertical-align:-1px}
+.legend{display:flex;gap:16px;flex-wrap:wrap;justify-content:center;margin:-6px 0 0;font-size:14px;color:var(--ink-soft);font-family:var(--display)}
+.fuelpop{position:absolute;left:50%;top:42%;font-family:var(--display);font-weight:700;font-size:20px;color:var(--grass);background:var(--paper);border:3px solid var(--grass);border-radius:999px;padding:2px 12px;z-index:4;pointer-events:none;white-space:nowrap;animation:popup 1.9s ease-out forwards}
+.tank.fueling .rocketbox svg{animation:glug .5s ease-in-out 3}
+@keyframes popup{0%{opacity:0;transform:translate(-50%,10px) scale(.6)}15%{opacity:1;transform:translate(-50%,0) scale(1.1)}70%{opacity:1;transform:translate(-50%,-20px)}100%{opacity:0;transform:translate(-50%,-60px)}}
+@keyframes glug{0%,100%{transform:scale(1)}50%{transform:scale(1.04) translateY(-2px)}}
 
 .pad{background:var(--paper);border-radius:28px;border:4px solid var(--ink);box-shadow:0 8px 0 var(--ink);padding:20px;display:flex;flex-direction:column;gap:18px;align-items:center;position:relative}
 .modes{display:flex;gap:6px;background:var(--sky);border-radius:999px;padding:5px;flex-wrap:wrap;justify-content:center}
@@ -146,7 +157,7 @@ details.grown summary{font-family:var(--display);font-weight:600;font-size:18px;
 .tank-text{text-align:center;position:relative;z-index:1}
 .tank-title{font-family:var(--display);font-weight:700;font-size:20px;margin:6px 0 0}
 .tank-count{font-family:var(--display);font-weight:500;font-size:16px;color:var(--ink-soft);margin:0;font-variant-numeric:tabular-nums}
-#fuel{transform-box:fill-box;transform-origin:50% 100%;transition:transform 1s cubic-bezier(.3,1.4,.5,1)}
+#fuel{transform-box:fill-box;transform-origin:50% 100%;transition:transform 1.8s cubic-bezier(.25,.8,.35,1)}
 .flame{opacity:0;transform-box:fill-box;transform-origin:50% 0}
 .countdown{position:absolute;inset:0;display:grid;place-items:center;font-family:var(--display);font-weight:700;font-size:96px;color:var(--berry);text-shadow:0 4px 0 var(--ink);z-index:3;pointer-events:none}
 .countdown.go{font-size:40px;text-align:center;line-height:1.1}
@@ -176,6 +187,7 @@ details.grown summary{font-family:var(--display);font-weight:600;font-size:18px;
   .launchpad{display:none}
   .tank-text{text-align:left}
   .countdown{font-size:64px}
+  .fuelpop{left:32%;top:62%;font-size:16px}
   .countdown.go{font-size:30px}
   @keyframes liftoff{0%{transform:translateY(0)}20%{transform:translateY(0)}100%{transform:translateY(-500px)}}
   @keyframes arrive{from{transform:translateY(260px)}to{transform:translateY(0) rotate(18deg)}}
@@ -211,6 +223,7 @@ canvas#fx{position:fixed;inset:0;pointer-events:none;z-index:60;width:100%;heigh
   </header>
 
   <nav class="tabs" id="tabs" role="tablist" aria-label="Levels"></nav>
+  <p class="legend" aria-hidden="true"><span><i class="s1"></i>1 star</span><span><i class="s2"></i>2 stars</span><span><i class="s3"></i>3 stars = learned</span></p>
 
   <div class="stage">
     <aside class="tank" id="tank" aria-label="Rocket fuel for this level">
@@ -244,6 +257,7 @@ canvas#fx{position:fixed;inset:0;pointer-events:none;z-index:60;width:100%;heigh
       <div class="tank-text">
         <p class="tank-title" id="tankTitle">Rocket fuel</p>
         <p class="tank-count" id="tankCount"></p>
+        <p class="tank-count" id="tankStars"></p>
       </div>
       <div class="countdown" id="countdown" hidden></div>
     </aside>
@@ -421,8 +435,9 @@ function renderTabs(){
   levels().forEach(l=>{
     const b=document.createElement("button");b.className="tab";b.type="button";b.setAttribute("role","tab");b.id="tab-"+l.id;
     b.setAttribute("aria-selected",S.level===l.id);b.style.setProperty("--c",l.c);
-    const k=known(l.id).length,n=words(l.id).length;
-    b.innerHTML=`<b>${esc(lvName(l.id))}</b><small>${esc(lvSub(l.id))}</small><small>${k} of ${n} known</small><span class="meter"><i style="width:${n?k/n*100:0}%"></i></span>`;
+    const ws=words(l.id),n=ws.length,c=[0,0,0,0];ws.forEach(w=>c[Math.min(count(l.id,w),NEED)]++);
+    const pc=x=>n?x/n*100:0;
+    b.innerHTML=`<b>${esc(lvName(l.id))}</b><small>${esc(lvSub(l.id))}</small><small>${c[3]} of ${n} known</small><span class="meter" aria-hidden="true"><i class="s3" style="width:${pc(c[3])}%"></i><i class="s2" style="width:${pc(c[2])}%"></i><i class="s1" style="width:${pc(c[1])}%"></i></span><span class="tally" aria-label="${c[1]} with 1 star, ${c[2]} with 2 stars, ${c[3]} with 3 stars"><span><i class="s1"></i>${c[1]}</span><span><i class="s2"></i>${c[2]}</span><span><i class="s3"></i>${c[3]}</span></span>`;
     b.onclick=()=>{if(S.level===l.id)return;S.level=l.id;save();current=null;last=null;resting=false;renderAll();};
     nav.appendChild(b);
   });
@@ -547,7 +562,9 @@ function askReset(){
 let launching=false;
 function renderTank(){
   const lv=S.level,k=known(lv).length,n=words(lv).length,full=n>0&&k===n;
-  $("fuel").style.transform=`scaleY(${n?k/n:0})`;
+  const stars=words(lv).reduce((s,w)=>s+Math.min(count(lv,w),NEED),0);
+  $("fuel").style.transform=`scaleY(${n?stars/(n*NEED):0})`;
+  $("tankStars").textContent=full?"":`⭐ ${stars} of ${n*NEED} stars`;
   if(launching)return;
   const t=$("tank");t.classList.remove("launch");t.classList.toggle("space",full);
   $("tankTitle").textContent=full?"In space!":"Rocket fuel";
@@ -576,6 +593,8 @@ function correct(){
   locked=true;const lv=S.level,w=current;
   prog(lv)[w]=count(lv,w)+1;save();
   ding();
+  if(!unknown(lv).length)launching=true;
+  renderTank();renderTabs();fuelPop();
   if(isMath(lv)&&count(lv,w)<NEED)setTimeout(()=>say(spoken(w),1),250);
   const pp=$("pad").querySelector(".pips");if(pp)pp.outerHTML=pips(w);
   const m=$("pad").querySelector(".msg");if(m){m.className="msg good";m.textContent=CHEERS[Math.random()*CHEERS.length|0];}
@@ -594,6 +613,12 @@ function miss(){
   setTimeout(()=>{last=current;current=null;locked=false;renderPad();},math?3200:2200);
 }
 
+function fuelPop(){
+  const t=$("tank"),el=document.createElement("div");
+  el.className="fuelpop";el.textContent="+ fuel ⛽";t.appendChild(el);t.classList.add("fueling");
+  tone(392,.15,.12,"sine",.08);tone(523,.27,.12,"sine",.08);
+  setTimeout(()=>{el.remove();t.classList.remove("fueling");},1900);
+}
 let pendingLaunch=false;
 function celebrate(w){
   justKnown=w;
