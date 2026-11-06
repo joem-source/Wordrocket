@@ -213,18 +213,18 @@ details.grown summary{font-family:var(--display);font-weight:600;font-size:18px;
 .ls-planet{top:8%;right:6%;font-size:min(24vw,170px)}
 .ls-moon{top:14%;left:6%;font-size:min(14vw,100px)}
 .launchscreen.space .ls-planet,.launchscreen.space .ls-moon{opacity:1}
-.ls-ground{position:absolute;left:0;right:0;bottom:0;height:13vh;background:#2FB36E;border-top:6px solid #1D2846;transition:transform 2.4s cubic-bezier(.55,0,.6,1)}
-.ls-pad{position:absolute;left:50%;bottom:13vh;width:min(62vw,340px);height:24px;margin-left:calc(min(62vw,340px) / -2);background:repeating-linear-gradient(90deg,#1D2846 0 18px,#FFC53D 18px 36px);border:4px solid #1D2846;border-radius:8px;transition:transform 2.4s cubic-bezier(.55,0,.6,1)}
+.ls-ground{position:absolute;left:0;right:0;bottom:0;height:10vh;background:#2FB36E;border-top:6px solid #1D2846;transition:transform 2.4s cubic-bezier(.55,0,.6,1)}
+.ls-pad{position:absolute;left:50%;bottom:10vh;width:min(62vw,340px);height:24px;margin-left:calc(min(62vw,340px) / -2);background:repeating-linear-gradient(90deg,#1D2846 0 18px,#FFC53D 18px 36px);border:4px solid #1D2846;border-radius:8px;transition:transform 2.4s cubic-bezier(.55,0,.6,1)}
 .launchscreen.up .ls-ground,.launchscreen.up .ls-pad{transform:translateY(60vh)}
-.ls-rocket{position:absolute;left:50%;bottom:calc(13vh + 14px);height:min(54vh,520px);transform:translateX(-50%);z-index:2}
+.ls-rocket{position:absolute;left:50%;bottom:calc(10vh + 26px - min(60vh,640px) * .16);height:min(60vh,640px);transform:translateX(-50%);z-index:2}
 .ls-rocket svg{height:100%;width:auto;display:block;overflow:visible}
 .launchscreen.ignite .ls-rocket{animation:lsShake .07s linear infinite}
 .launchscreen.ignite .flame{opacity:1;animation:flick .1s infinite alternate}
 .launchscreen.up .ls-rocket{animation:lsUp 3.2s cubic-bezier(.5,0,.8,.35) forwards}
-.launchscreen.space .ls-rocket{bottom:auto;top:40%;height:min(42vh,380px);animation:lsArrive 1.4s cubic-bezier(.2,1.3,.4,1) both,lsFloat 3s 1.4s ease-in-out infinite}
-.ls-smoke span{position:absolute;bottom:10vh;width:22vmin;height:22vmin;margin-left:-11vmin;border-radius:50%;background:#F3F6FB;opacity:0;z-index:1}
+.launchscreen.space .ls-rocket{bottom:auto;top:40%;height:min(48vh,460px);animation:lsArrive 1.4s cubic-bezier(.2,1.3,.4,1) both,lsFloat 3s 1.4s ease-in-out infinite}
+.ls-smoke span{position:absolute;bottom:7vh;width:22vmin;height:22vmin;margin-left:-11vmin;border-radius:50%;background:#F3F6FB;opacity:0;z-index:1}
 .launchscreen.ignite .ls-smoke span{animation:lsPuff 2.4s ease-out forwards}
-.ls-count{position:absolute;left:0;right:0;top:0;height:30vh;display:grid;place-items:center;font-family:var(--display);font-weight:700;font-size:min(30vw,22vh,240px);color:#fff;-webkit-text-stroke:6px #1D2846;paint-order:stroke fill;text-shadow:0 12px 0 #1D2846;z-index:3;pointer-events:none;text-align:center;line-height:1}
+.ls-count{position:absolute;left:0;right:0;top:0;height:29vh;display:grid;place-items:center;font-family:var(--display);font-weight:700;font-size:min(30vw,22vh,240px);color:#fff;-webkit-text-stroke:6px #1D2846;paint-order:stroke fill;text-shadow:0 12px 0 #1D2846;z-index:3;pointer-events:none;text-align:center;line-height:1}
 .ls-count.go{font-size:min(15vw,12vh,140px);color:#FFC53D}
 .ls-count.pop{animation:countPop .85s ease-out both}
 .ls-count.gone{animation:none;opacity:0;transition:opacity .6s}
@@ -657,7 +657,14 @@ function launch(){
   };
   step();
 }
-function closeLaunch(){const ls=$("launchscreen");ls.hidden=true;ls.className="launchscreen";$("lsRocket").innerHTML="";}
+function goFull(){
+  const el=document.documentElement;
+  try{const r=el.requestFullscreen||el.webkitRequestFullscreen||el.webkitRequestFullScreen;if(r){const p=r.call(el,{navigationUI:"hide"});if(p&&p.catch)p.catch(()=>{});}}catch(e){}
+}
+function exitFull(){
+  try{if(document.fullscreenElement||document.webkitFullscreenElement){const x=document.exitFullscreen||document.webkitExitFullscreen;const p=x&&x.call(document);if(p&&p.catch)p.catch(()=>{});}}catch(e){}
+}
+function closeLaunch(){const ls=$("launchscreen");ls.hidden=true;ls.className="launchscreen";$("lsRocket").innerHTML="";exitFull();}
 function renderAll(){renderTabs();renderTank();renderPad();renderShelf();renderGrown();}
 
 /* ---------- play ---------- */
@@ -737,7 +744,7 @@ function celebrate(w){
 }
 $("partyOk").onclick=()=>{
   $("party").hidden=true;last=current;current=null;locked=false;
-  if(pendingLaunch){pendingLaunch=false;launching=true;renderAll();launch();}
+  if(pendingLaunch){pendingLaunch=false;launching=true;goFull();renderAll();launch();}
   else renderAll();
 };
 
